@@ -1435,6 +1435,10 @@ void pinMode (int pin, int mode)
 
   setupCheck ("pinMode") ;
 
+  /* Arndt 01.05.22 */
+  if (wiringPiDebug)
+    printf ("pinMode: Pin:%d, Mode:%d\n",pin,mode);
+
   if ((pin & PI_GPIO_MASK) == 0)		// On-board pin
   {
     /**/ if (wiringPiMode == WPI_MODE_PINS)
@@ -1465,8 +1469,11 @@ void pinMode (int pin, int mode)
     }
     else if (mode == PWM_OUTPUT)
     {
-      if ((alt = gpioToPwmALT [pin]) == 0)	// Not a hardware capable PWM pin
+      if ((alt = gpioToPwmALT [pin]) == 0) {	// Not a hardware capable PWM pin
+	if (wiringPiDebug)
+            printf ("PinMode:Exiting as not a hardwqre capable PWM pin\n");
 	return ;
+      }
 
       usingGpioMemCheck ("pinMode PWM") ;
 
@@ -1556,9 +1563,13 @@ void pullUpDnControl (int pin, int pud)
   }
   else						// Extension module
   {
-    if ((node = wiringPiFindNode (pin)) != NULL)
+    if ((node = wiringPiFindNode (pin)) != NULL) {
       node->pullUpDnControl (node, pin, pud) ;
+      if (wiringPiDebug)
+         printf ("PullUpDownControl:Node.pinBase:%d, Pin:%d, Pud:%d\n",node->pinBase,pin,pud);
+    }
     return ;
+    
   }
 }
 
@@ -1952,6 +1963,8 @@ int waitForInterrupt (int pin, int mS)
     lseek (fd, 0, SEEK_SET) ;	// Rewind
     (void)read (fd, &c, 1) ;	// Read & clear
   }
+  if (wiringPiDebug)
+    printf ("WaitForInterrupt:Result Pin:%d, Value:%d\n",pin,x);
 
   return x ;
 }
@@ -1975,8 +1988,9 @@ static void *interruptHandler (UNU void *arg)
   pinPass = -1 ;
 
   for (;;)
-    if (waitForInterrupt (myPin, -1) > 0)
+    if (waitForInterrupt (myPin, -1) > 0) {
       isrFunctions [myPin] () ;
+    }
 
   return NULL ;
 }
@@ -2076,6 +2090,8 @@ int wiringPiISR (int pin, int mode, void (*function)(void))
     while (pinPass != -1)
       delay (1) ;
   pthread_mutex_unlock (&pinMutex) ;
+  if (wiringPiDebug)
+    printf ("wiringPISR: Setup handler for Pin:%d, Mode:%d\n",pin,mode);
 
   return 0 ;
 }
